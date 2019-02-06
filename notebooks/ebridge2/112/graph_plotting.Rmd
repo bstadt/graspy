@@ -31,11 +31,13 @@ g_legend<-function(a.gplot){
 
 ```{r}
 ndmg.dwi.adj = as.matrix(read.csv('./ndmgd.csv', sep=",", header=FALSE))
-derek.dwi.adj = as.matrix(read.csv('./natd.csv', sep=",", header=FALSE))
+derek.dwid.adj = as.matrix(read.csv('./natd.csv', sep=",", header=FALSE))
+derek.dwip.adj = as.matrix(read.csv('./natp.csv', sep=",", header=FALSE))
 ndmg.func.adj = as.matrix(read.csv('./ndmgf.csv', sep=",", header=FALSE))
 fmriprep.func.adj = as.matrix(read.csv('./fmriprep.csv', sep=",", header=FALSE))
 colnames(ndmg.dwi.adj) <- as.character(seq(1, dim(ndmg.dwi.adj)[1]))
-colnames(derek.dwi.adj) <- as.character(seq(1, dim(derek.dwi.adj)[1]))
+colnames(derek.dwid.adj) <- as.character(seq(1, dim(derek.dwid.adj)[1]))
+colnames(derek.dwip.adj) <- as.character(seq(1, dim(derek.dwip.adj)[1]))
 colnames(ndmg.func.adj) <- as.character(seq(1, dim(ndmg.func.adj)[1]))
 colnames(fmriprep.func.adj) <- as.character(seq(1, dim(fmriprep.func.adj)[1]))
 diag(ndmg.dwi.adj) <- 0
@@ -47,16 +49,20 @@ ptr <- function(x) {
   x <- (x - min(x))/(max(x) - min(x))
   return(x)
 }
+```
 
+```{r}
 ndmg.dwi.adj <- ptr(ndmg.dwi.adj)
-derek.dwi.adj <- ptr(derek.dwi.adj)
+derek.dwid.adj <- ptr(derek.dwid.adj)
+derek.dwip.adj <- ptr(derek.dwip.adj)
 #ndmg.dwi.adj <- (ndmg.dwi.adj - min(ndmg.dwi.adj))/(max(ndmg.dwi.adj) - min(ndmg.dwi.adj))
 #fmriprep.func.adj <- (fmriprep.func.adj - min(fmriprep.func.adj))/(max(fmriprep.func.adj) - min(fmriprep.func.adj))
 ```
 
 ```{r}
 ndmg.dwi.dat <- melt(ndmg.dwi.adj)
-derek.dwi.dat <- melt(derek.dwi.adj)
+derek.dwid.dat <- melt(derek.dwid.adj)
+derek.dwip.dat <- melt(derek.dwip.adj)
 ndmg.func.dat <- melt(ndmg.func.adj)
 fmriprep.func.dat <- melt(fmriprep.func.adj)
 ```
@@ -66,8 +72,10 @@ fmriprep.func.dat <- melt(fmriprep.func.adj)
 
 
 ```{r}
-titles=list("NDMG Diffusion", "Native Diffusion", "NDMG Functional", "fMRIprep Functional")
-mtxs = list(ndmg.dwi.dat, derek.dwi.dat, ndmg.func.dat, fmriprep.func.dat)
+titles=list("NDMG Diffusion", "Native Deterministic", "Native Probabilistic",
+            "NDMG Functional", "fMRIprep Functional")
+mtxs = list(ndmg.dwi.dat, derek.dwid.dat, derek.dwip.dat,
+            ndmg.func.dat, fmriprep.func.dat)
 plots = lapply(1:length(mtxs), function(i) {
   mtx = mtxs[[i]]
   ggplot(mtx, aes(x=Var1, y=Var2, fill=value)) +
@@ -82,7 +90,7 @@ plots = lapply(1:length(mtxs), function(i) {
 })
 ```
 
-```{r, fig.height=5, fig.width=6}
+```{r, fig.height=5, fig.width=9}
 sim_leg <- g_legend(plots[[1]])
 plots <- lapply(1:length(plots), function(i) {
   if (i != 1) {
@@ -96,6 +104,6 @@ plots <- lapply(1:length(plots), function(i) {
   }
   plots[[i]] <- plots[[i]] + guides(fill=FALSE)
 })
-
+drinking 
 grid.arrange(arrangeGrob(grobs=plots, nrow=2), sim_leg, ncol=2, widths=c(0.9, 0.2))
 ```
