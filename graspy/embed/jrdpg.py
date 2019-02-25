@@ -96,27 +96,8 @@ class JointRDPG(BaseEmbed):
         Number of vertices in each graph
     latent_left_ : array, shape (n_samples, n_components)
         Estimated left latent positions of the graph. 
-    latent_right_ : array, shape (n_samples, n_components), or None
-        Only computed when the graph is directed, or adjacency matrix is 
-        asymmetric. Estimated right latent positions of the graph. Otherwise, 
-        None.
-    singular_values_ : array, shape (n_components)
-        Singular values associated with the latent position matrices.
-    indices_ : array, or None
-        If ``lcc`` is True, these are the indices of the vertices that were 
-        kept.
-
-    See Also
-    --------
-    graspy.embed.selectSVD
-    graspy.embed.select_dimension
-
-    References
-    ----------
-    .. [1] Levin, K., Athreya, A., Tang, M., Lyzinski, V., & Priebe, C. E. (2017, 
-       November).A central limit theorem for an omnibus embedding of multiple random 
-       dot product graphs. In Data Mining Workshops (ICDMW), 2017 IEEE International 
-       Conference on (pp. 964-967). IEEE.
+    latent_right_ : None
+    
     """
 
     def __init__(
@@ -169,9 +150,12 @@ class JointRDPG(BaseEmbed):
         if self.unscaled:
             Us = np.hstack([U[:, :best_dimension] for U in Us])
         else:
-            Us = [U[:, :best_dimension] for U in Us]
-            Ds = [D[:best_dimension] for D in Ds]
-            Us = np.hstack([U @ np.diag(D) for U, D in zip(Us, Ds)])
+            Us = np.hstack(
+                [
+                    U[:, :best_dimension] @ np.diag(D[:best_dimension])
+                    for U, D in zip(Us, Ds)
+                ]
+            )
 
         Vhat, _, _ = selectSVD(
             Us,
