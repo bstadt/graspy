@@ -94,9 +94,10 @@ class JointRDPG(BaseEmbed):
         Number of graphs
     n_vertices_ : int
         Number of vertices in each graph
-    latent_left_ : array, shape (n_samples, n_components)
+    latent_left_ : array, shape (n_vertices, n_components)
         Estimated left latent positions of the graph. 
     latent_right_ : None
+    scores_ : array, shape (n_samples, n_components, n_components)
     
     """
 
@@ -123,8 +124,9 @@ class JointRDPG(BaseEmbed):
         n_components = int(np.ceil(np.log2(np.min(self.n_vertices_))))
 
         # embed individual graphs
-        Us = []
+        """Us = []
         Ds = []
+        Vs = []
         for graph in graphs:
             U, D, _ = selectSVD(
                 graph,
@@ -133,7 +135,15 @@ class JointRDPG(BaseEmbed):
                 n_iter=self.n_iter,
             )
             Us.append(U)
-            Ds.append(D)
+            Ds.append(D)"""
+         embeddings = [
+             selectSVD(
+                 graph, 
+                 n_components=n_components, 
+                 algorithm=self.algorithm, 
+                 n_iter=self.n_iter) 
+                 for graph in graphs
+            ]
 
         # Choose the best embedding dimension for each graphs
         if self.n_components is None:
@@ -143,7 +153,7 @@ class JointRDPG(BaseEmbed):
                 embedding_dimensions.append(elbows[-1])
 
             # Choose the max of all of best embedding dimension of all graphs
-            best_dimension = np.max(embedding_dimensions)
+            best_dimension = np.median(embedding_dimensions)
         else:
             best_dimension = self.n_components
 
@@ -210,6 +220,7 @@ class JointRDPG(BaseEmbed):
         Vhat = self._reduce_dim(graphs)
         self.latent_left_ = Vhat
         self.latent_right_ = None
+        self.scores_ = Vhat.T @ graphs @ Vhat
 
         return self
 
