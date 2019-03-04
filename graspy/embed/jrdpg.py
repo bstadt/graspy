@@ -94,11 +94,12 @@ class JointRDPG(BaseEmbed):
         Number of graphs
     n_vertices_ : int
         Number of vertices in each graph
-    latent_left_ : array, shape (n_vertices, n_components)
+    latent_left_ : array, shape (n_samples, n_components)
         Estimated left latent positions of the graph. 
-    latent_right_ : None
+    latent_right_ : array, shape (n_samples, n_components), or None
+        Only computed when the graph is directed, or adjacency matrix is assymetric.
+        Estimated right latent positions of the graph. Otherwise, None.
     scores_ : array, shape (n_samples, n_components, n_components)
-    
     """
 
     def __init__(
@@ -136,14 +137,15 @@ class JointRDPG(BaseEmbed):
             )
             Us.append(U)
             Ds.append(D)"""
-         embeddings = [
-             selectSVD(
-                 graph, 
-                 n_components=n_components, 
-                 algorithm=self.algorithm, 
-                 n_iter=self.n_iter) 
-                 for graph in graphs
-            ]
+        embeddings = [
+            selectSVD(
+                graph,
+                n_components=n_components,
+                algorithm=self.algorithm,
+                n_iter=self.n_iter,
+            )
+            for graph in graphs
+        ]
 
         # Choose the best embedding dimension for each graphs
         if self.n_components is None:
