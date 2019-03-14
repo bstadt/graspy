@@ -8,7 +8,7 @@ import numpy as np
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import get_lcc, import_graph, is_fully_connected
-from .base import BaseEmbed
+from .base import BaseEmbed, _check_valid_graphs
 from .svd import selectSVD
 
 
