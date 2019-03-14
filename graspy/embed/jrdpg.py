@@ -1,7 +1,3 @@
-# omni.py
-# Created by Jaewon Chung on 2018-09-10.
-# Email: j1c@jhu.edu
-# Copyright (c) 2018. All rights reserved.
 import warnings
 
 import numpy as np
@@ -18,10 +14,7 @@ class JointRDPG(BaseEmbed):
     graphs with matched vertex sets.
 
     Given :math:`A_1, A_2, ..., A_m` a collection of (possibly weighted) adjacency 
-    matrices of a collection :math:`m` undirected graphs with matched vertices. 
-    Then the :math:`(mn \times mn)` omnibus matrix, :math:`M`, has the subgraph where 
-    :math:`M_{ij} = \frac{1}{2}(A_i + A_j)`. The omnibus matrix is then embedded
-    using adjacency spectral embedding [1]_.
+    matrices of a collection :math:`m`
 
     Parameters
     ----------
@@ -34,8 +27,9 @@ class JointRDPG(BaseEmbed):
         If `n_compoents=None`, then compute the optimal embedding dimension using
         `select_dimension`. Otherwise, ignored.
     unscaled : bool, optional, default: True
-        Whether to scale invidivual eigenvectors with eigenvalues
-    algorithm : {'full', 'truncated' (default), 'randomized'}, optional
+        Whether to scale invidivual eigenvectors with eigenvalues in first embedding 
+        stage.
+    algorithm : {'full', 'truncated', 'randomized' (default)}, optional
         SVD solver to use:
 
         - 'full'
@@ -49,10 +43,6 @@ class JointRDPG(BaseEmbed):
         Number of iterations for randomized SVD solver. Not used by 'full' or 
         'truncated'. The default is larger than the default in randomized_svd 
         to handle sparse matrices that may have large slowly decaying spectrum.
-    check_lcc : bool , optional (defult = True)
-        Whether to check if the average of all input graphs are connected. May result
-        in non-optimal results if the average graph is unconnected. If True and average
-        graph is unconnected, a UserWarning is thrown. 
 
     Attributes
     ----------
@@ -63,9 +53,14 @@ class JointRDPG(BaseEmbed):
     latent_left_ : array, shape (n_samples, n_components)
         Estimated left latent positions of the graph. 
     latent_right_ : array, shape (n_samples, n_components), or None
-        Only computed when the graph is directed, or adjacency matrix is assymetric.
-        Estimated right latent positions of the graph. Otherwise, None.
+        Estimated right latent positions of the graph. Only computed when the an input 
+        graph is directed, or adjacency matrix is assymetric. Otherwise, None.
     scores_ : array, shape (n_samples, n_components, n_components)
+
+    Notes
+    -----
+    When an input graph is directed, `n_components` of `latent_left_` may not be equal to
+    `n_components` of `latent_right_`.
     """
 
     def __init__(
@@ -75,14 +70,12 @@ class JointRDPG(BaseEmbed):
         unscaled=True,
         algorithm="randomized",
         n_iter=5,
-        check_lcc=True,
     ):
         super().__init__(
             n_components=n_components,
             n_elbows=n_elbows,
             algorithm=algorithm,
             n_iter=n_iter,
-            check_lcc=check_lcc,
         )
         self.unscaled = unscaled
 
@@ -109,7 +102,7 @@ class JointRDPG(BaseEmbed):
                 elbows, _ = select_dimension(D, n_elbows=self.n_elbows)
                 embedding_dimensions.append(elbows[-1])
 
-            # Choose the max of all of best embedding dimension of all graphs
+            # Choose the median of all of best embedding dimension of all graphs
             best_dimension = int(np.ceil(np.median(embedding_dimensions)))
         else:
             best_dimension = self.n_components
@@ -132,6 +125,7 @@ class JointRDPG(BaseEmbed):
             )
 
         # Second SVD for vertices
+        # The notation is slightly different than the paper
         Uhat, _, _ = selectSVD(
             Us,
             n_components=self.n_components,
