@@ -7,43 +7,9 @@ import warnings
 import numpy as np
 from sklearn.utils.validation import check_is_fitted
 
-from ..utils import get_lcc, import_graph, is_fully_connected, is_symmetric
-from .base import BaseEmbed
-from .svd import selectSVD, select_dimension
-
-
-def _check_valid_graphs(graphs):
-    """
-    Checks if all graphs in list have same shapes.
-
-    Raises an ValueError if there are more than one shape in the input list,
-    or if the list is empty or has one element.
-
-    Parameters
-    ----------
-    graphs : list
-        List of array-like with shapes (n_vertices, n_vertices).
-
-    Raises
-    ------
-    ValueError
-        If all graphs do not have same shape, or input list is empty or has 
-        one element.
-    """
-    if len(graphs) <= 1:
-        msg = "Joint RDPG embedding requires more than one graph."
-        raise ValueError(msg)
-
-    shapes = set(map(np.shape, graphs))
-
-    if len(shapes) > 1:
-        msg = "There are {} different sizes of graphs.".format(len(shapes))
-        raise ValueError(msg)
-
-    for graph in graphs:
-        if not is_symmetric(graph):
-            msg = "Input graphs must be symmetric."
-            raise ValueError(msg)
+from ..utils import get_lcc, import_graph, is_fully_connected, is_almost_symmetric
+from .base import BaseEmbed, _check_valid_graphs
+from .svd import select_dimension, selectSVD
 
 
 class JointRDPG(BaseEmbed):
@@ -125,18 +91,6 @@ class JointRDPG(BaseEmbed):
         n_components = int(np.ceil(np.log2(np.min(self.n_vertices_))))
 
         # embed individual graphs
-        """Us = []
-        Ds = []
-        Vs = []
-        for graph in graphs:
-            U, D, _ = selectSVD(
-                graph,
-                n_components=n_components,
-                algorithm=self.algorithm,
-                n_iter=self.n_iter,
-            )
-            Us.append(U)
-            Ds.append(D)"""
         embeddings = [
             selectSVD(
                 graph,
@@ -146,6 +100,7 @@ class JointRDPG(BaseEmbed):
             )
             for graph in graphs
         ]
+        Us, Ds, Vs = zip(*embeddings)
 
         # Choose the best embedding dimension for each graphs
         if self.n_components is None:
@@ -155,12 +110,13 @@ class JointRDPG(BaseEmbed):
                 embedding_dimensions.append(elbows[-1])
 
             # Choose the max of all of best embedding dimension of all graphs
-            best_dimension = np.median(embedding_dimensions)
+            best_dimension = int(np.ceil(np.median(embedding_dimensions)))
         else:
             best_dimension = self.n_components
 
         if self.unscaled:
             Us = np.hstack([U[:, :best_dimension] for U in Us])
+            Vs = np.hstack([V.T[:, :best_dimension] for V in Vs])
         else:
             Us = np.hstack(
                 [
@@ -168,8 +124,15 @@ class JointRDPG(BaseEmbed):
                     for U, D in zip(Us, Ds)
                 ]
             )
+            Vs = np.hstack(
+                [
+                    V[:, :best_dimension] @ np.diag(V[:best_dimension])
+                    for V, D in zip(Vs, Ds)
+                ]
+            )
 
-        Vhat, _, _ = selectSVD(
+        # Second SVD for vertices
+        Uhat, _, _ = selectSVD(
             Us,
             n_components=self.n_components,
             n_elbows=self.n_elbows,
@@ -177,7 +140,14 @@ class JointRDPG(BaseEmbed):
             n_iter=self.n_iter,
         )
 
-        return Vhat
+        Vhat, _, _ = selectSVD(
+            Vs,
+            n_components=self.n_components,
+            n_elbows=self.n_elbows,
+            algorithm=self.algorithm,
+            n_iter=self.n_iter,
+        )
+        return Uhat, Vhat
 
     def fit(self, graphs, y=None):
         """
@@ -202,27 +172,24 @@ class JointRDPG(BaseEmbed):
         # Check if the input is valid
         _check_valid_graphs(graphs)
 
+        # Check if undirected
+        undirected = any(is_almost_symmetric(g) for g in graphs)
+
         # Save attributes
         self.n_graphs_ = len(graphs)
         self.n_vertices_ = graphs[0].shape[0]
 
         graphs = np.stack(graphs)
 
-        # Check if Abar is connected
-        """if self.check_lcc:
-            if not is_fully_connected(graphs.mean(axis=0)):
-                msg = (
-                    "Input graphs are not fully connected. Results may not"
-                    + "be optimal. You can compute the largest connected component by"
-                    + "using ``graspy.utils.get_multigraph_union_lcc``."
-                )
-                warnings.warn(msg, UserWarning)"""
-
         # embed
-        Vhat = self._reduce_dim(graphs)
-        self.latent_left_ = Vhat
-        self.latent_right_ = None
-        self.scores_ = Vhat.T @ graphs @ Vhat
+        Uhat, Vhat = self._reduce_dim(graphs)
+        self.latent_left_ = Uhat
+        if not undirected:
+            self.latent_right_ = Vhat
+            self.scores_ = Uhat.T @ graphs @ Vhat
+        else:
+            self.latent_right_ = None
+            self.scores_ = Uhat.T @ graphs @ Uhat
 
         return self
 
