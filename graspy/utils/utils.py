@@ -5,10 +5,13 @@
 # Email: ebridge2@jhu.edu
 # Copyright (c) 2018. All rights reserved.
 
+import warnings
+from collections import Iterable
 from functools import reduce
+from pathlib import Path
 
-import numpy as np
 import networkx as nx
+import numpy as np
 from sklearn.utils import check_array
 
 
@@ -49,6 +52,90 @@ def import_graph(graph):
         msg = "Input must be networkx.Graph or np.array, not {}.".format(type(graph))
         raise TypeError(msg)
     return out
+
+
+def import_edgelist(
+    path, extension="edgelist", delimiter=None, nodetype=int, return_vertices=False
+):
+    """
+    Function for reading a single or multiple edgelists. When importing multiple 
+    edgelists, the union of vertices from all graphs is computed so that each output
+    graph have matched vertex set. The order of nodes are sorted by node values.
+
+    Parameters
+    ----------
+    path : str, Path object, or iterable
+        If ``path`` is a directory, then the importing order will be sorted in 
+        alphabetical order.
+
+    extension : str, optional
+        If ``path`` is a directory, then the function will convert all files
+        with matching extension. 
+
+    delimiter : str or None, default=None, optional
+        Delimiter of edgelist. If None, the delimiter is whitespace.
+
+    nodetype : int (default), float, str, Python type, optional
+       Convert node data from strings to specified type.
+
+    return_vertices : bool, default=False, optional
+        Returns the union of all ind
+
+    Returns
+    -------
+    out : list of array-like, or array-like, shape (n_vertices, n_vertices)
+        If ``path`` is a directory, a list of arrays is returned. If ``path`` is a file,
+        an array is returned.
+
+    vertices : array-like, shape (n_vertices, )
+        If ``return_vertices`` == True, then returns an array of all vertices that were 
+        included in the output graphs. 
+    """
+    # p = Path(path)
+    if not isinstance(path, (str, Path, Iterable)):
+        msg = "path must be a string or Iterable, not {}".format(type(path))
+        raise TypeError(msg)
+
+    # get a list of files to import
+    if isinstance(path, (str, Path)):
+        p = Path(path)
+        if p.is_dir():
+            files = sorted(p.glob("*" + extension))
+        elif p.is_file():
+            files = [p]
+        else:
+            raise ValueError("No graphs founds to import.")
+    else:  # path is an iterable
+        files = [Path(f) for f in path]
+
+    if len(files) == 0:
+        msg = "No files found with '{}' extension found.".format(extension)
+        raise ValueError(msg)
+
+    graphs = [
+        nx.read_weighted_edgelist(f, nodetype=nodetype, delimiter=delimiter)
+        for f in files
+    ]
+
+    if all(len(G.nodes) == 0 for G in graphs):
+        msg = (
+            "All graphs have 0 vertices. Please double check if proper "
+            + "'delimiter' is given."
+        )
+        warnings.warn(msg, UserWarning)
+
+    # Compute union of all vertices
+    vertices = np.sort(reduce(np.union1d, [G.nodes for G in graphs]))
+    out = [nx.to_numpy_array(G, nodelist=vertices, dtype=np.float) for G in graphs]
+
+    # only return adjacency matrix if input is only 1 graph
+    if len(out) == 1:
+        out = out[0]
+
+    if return_vertices:
+        return out, vertices
+    else:
+        return out
 
 
 def is_symmetric(X):
@@ -130,13 +217,15 @@ def remove_loops(graph):
     return graph
 
 
-def to_laplace(graph, form="DAD"):
+def to_laplace(graph, form="DAD", regularizer=None):
     r"""
     A function to convert graph adjacency matrix to graph laplacian. 
 
-    Currently supports I-DAD and DAD laplacians, where D is the diagonal
+    Currently supports I-DAD, DAD, and R-DAD laplacians, where D is the diagonal
     matrix of degrees of each node raised to the -1/2 power, I is the 
-    identity matrix, and A is the adjacency matrix
+    identity matrix, and A is the adjacency matrix.
+    
+    R-DAD is regularized laplacian: where :math:`D_t = D + regularizer*I`.
 
     Parameters
     ----------
@@ -144,28 +233,54 @@ def to_laplace(graph, form="DAD"):
         Either array-like, (n_vertices, n_vertices) numpy array,
         or an object of type networkx.Graph.
 
-    form: {'I-DAD' (default), 'DAD'}, string, optional
+    form: {'I-DAD' (default), 'DAD', 'R-DAD'}, string, optional
         
         - 'I-DAD'
             Computes :math:`L = I - D*A*D`
         - 'DAD'
             Computes :math:`L = D*A*D`
+        - 'R-DAD'
+            Computes :math:`L = D_t*A*D_t` where :math:`D_t = D + regularizer*I`
+
+    regularizer: int, float or None, optional (default=None)
+        Constant to be added to the diagonal of degree matrix. If None, average 
+        node degree is added. If int or float, must be >= 0. Only used when 
+        ``form`` == 'R-DAD'.
 
     Returns
     -------
     L: numpy.ndarray
         2D (n_vertices, n_vertices) array representing graph 
         laplacian of specified form
+	
+    References
+    ----------
+    .. [1] Qin, Tai, and Karl Rohe. "Regularized spectral clustering
+           under the degree-corrected stochastic blockmodel." In Advances
+           in Neural Information Processing Systems, pp. 3120-3128. 2013
     """
-    valid_inputs = ["I-DAD", "DAD"]
+    valid_inputs = ["I-DAD", "DAD", "R-DAD"]
     if form not in valid_inputs:
         raise TypeError("Unsuported Laplacian normalization")
+
     A = import_graph(graph)
 
     if not is_almost_symmetric(A):
         raise ValueError("Laplacian not implemented/defined for directed graphs")
 
     D_vec = np.sum(A, axis=0)
+    # regularize laplacian with parameter
+    # set to average degree
+    if form == "R-DAD":
+        if regularizer == None:
+            regularizer = np.mean(D_vec)
+        elif not isinstance(regularizer, (int, float)):
+            raise TypeError(
+                "Regularizer must be a int or float, not {}".format(type(regularizer))
+            )
+        elif regularizer < 0:
+            raise ValueError("Regularizer must be greater than or equal to 0")
+        D_vec += regularizer
 
     with np.errstate(divide="ignore"):
         D_root = 1 / np.sqrt(D_vec)  # this is 10x faster than ** -0.5
@@ -175,7 +290,7 @@ def to_laplace(graph, form="DAD"):
     if form == "I-DAD":
         L = np.diag(D_vec) - A
         L = D_root @ L @ D_root
-    elif form == "DAD":
+    elif form == "DAD" or form == "R-DAD":
         L = D_root @ A @ D_root
     return symmetrize(L, method="avg")  # sometimes machine prec. makes this necessary
 
