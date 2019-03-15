@@ -13,8 +13,16 @@ class JointRDPG(BaseEmbed):
     Joint random dot product graphs (JRDPG) embeds arbitrary number of input 
     graphs with matched vertex sets.
 
-    Given :math:`A_1, A_2, ..., A_m` a collection of (possibly weighted) adjacency 
-    matrices of a collection :math:`m`
+    For a population of undirected graphs, JRDPG assumes that the population of graphs 
+    is sampled from :math:`VR^{(i)}V^T` where :math:`V \in \mathbb{R}^{n\times d}` and 
+    :math:`R^{(i)} \in \mathbb{R}^{d\times d}`. :math:`R^{(i)}` is allowed to vary 
+    for each graph, but are symmetric. All graphs share a common :math:`V`. 
+    
+    For a population of directed graphs, JRDPG assumes that the population is sampled from
+    :math:`UR^{(i)}V^T` where :math:`U \in \mathbb{R}^{n\times d_1}`, 
+    :math:`V \in \mathbb{R}^{n\times d_2}`, and :math:`R^{(i)} \in \mathbb{R}^{d_1\times d_2}`.
+    In this case, :math:`R^{(i)}` can be assymetric and non-square, but still share a common
+    :math:`U` and :math:`V`.
 
     Parameters
     ----------
