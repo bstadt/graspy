@@ -64,6 +64,7 @@ class JointRDPG(BaseEmbedMulti):
         Estimated right latent positions of the graph. Only computed when the an input 
         graph is directed, or adjacency matrix is assymetric. Otherwise, None.
     scores_ : array, shape (n_samples, n_components, n_components)
+        Estimated :math:`\hat{R}` matrices. 
 
     Notes
     -----
@@ -175,7 +176,7 @@ class JointRDPG(BaseEmbedMulti):
         graphs = self._check_input_graphs(graphs)
 
         # Check if undirected
-        undirected = any(is_almost_symmetric(g) for g in graphs)
+        undirected = all(is_almost_symmetric(g) for g in graphs)
 
         # embed
         Uhat, Vhat = self._reduce_dim(graphs)
@@ -192,19 +193,20 @@ class JointRDPG(BaseEmbedMulti):
     def fit_transform(self, graphs, y=None):
         """
         Fit the model with graphs and apply the embedding on graphs. 
-        n_dimension is either automatically determined or based on user input.
+        n_components is either automatically determined or based on user input.
 
         Parameters
         ----------
-        graphs : list of graphs
-            List of array-like, (n_vertices, n_vertices), or list of 
-            networkx.Graph.
+        graphs : list of nx.Graph or ndarray, or ndarray
+            If list of nx.Graph, each Graph must contain same number of nodes.
+            If list of ndarray, each array must have shape (n_vertices, n_vertices).
+            If ndarray, then array must have shape (n_graphs, n_vertices, n_vertices).
 
         y : Ignored
 
         Returns
         -------
-        out : array-like, shape (n_vertices * n_graphs, n_dimension) if input 
+        out : array-like, shape (n_graphs, n_vertices, n_components) if input 
             graphs were symmetric. If graphs were directed, returns tuple of 
             two arrays (same shape as above) where the first corresponds to the
             left latent positions, and the right to the right latent positions
