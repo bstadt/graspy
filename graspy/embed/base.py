@@ -203,7 +203,7 @@ class BaseEmbedMulti(BaseEmbed):
         """
         # Convert input to np.arrays
         # This check is needed because np.stack will always duplicate array in memory.
-        if isinstance(graphs, list):
+        if isinstance(graphs, (list, tuple)):
             out = [import_graph(g) for g in graphs]
             out = np.stack(out)
         elif isinstance(graphs, np.ndarray):
