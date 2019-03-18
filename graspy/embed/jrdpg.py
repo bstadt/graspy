@@ -4,11 +4,11 @@ import numpy as np
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import get_lcc, import_graph, is_fully_connected, is_almost_symmetric
-from .base import BaseEmbed, _check_valid_graphs
+from .base import BaseEmbedMulti
 from .svd import select_dimension, selectSVD
 
 
-class JointRDPG(BaseEmbed):
+class JointRDPG(BaseEmbedMulti):
     r"""
     Joint random dot product graphs (JRDPG) embeds arbitrary number of input 
     graphs with matched vertex sets.
@@ -26,17 +26,14 @@ class JointRDPG(BaseEmbed):
 
     Parameters
     ----------
-    n_components : int or None, default = None
+    n_components : int or None, (default=None)
         Desired dimensionality of output data. If "full", 
         n_components must be <= min(X.shape). Otherwise, n_components must be
         < min(X.shape). If None, then optimal dimensions will be chosen by
         -----.
-    n_elbows : int, optional, default: 2
+    n_elbows : int, optional (default=2)
         If `n_compoents=None`, then compute the optimal embedding dimension using
         `select_dimension`. Otherwise, ignored.
-    unscaled : bool, optional, default: True
-        Whether to scale invidivual eigenvectors with eigenvalues in first embedding 
-        stage.
     algorithm : {'full', 'truncated', 'randomized' (default)}, optional
         SVD solver to use:
 
@@ -47,10 +44,13 @@ class JointRDPG(BaseEmbed):
         - 'randomized'
             Computes randomized svd using 
             ``sklearn.utils.extmath.randomized_svd``
-    n_iter : int, optional (default = 5)
+    n_iter : int, optional (default=5)
         Number of iterations for randomized SVD solver. Not used by 'full' or 
         'truncated'. The default is larger than the default in randomized_svd 
         to handle sparse matrices that may have large slowly decaying spectrum.
+    unscaled : bool, optional (default=True)
+        Whether to scale invidivual eigenvectors with eigenvalues in first embedding 
+        stage.
 
     Attributes
     ----------
@@ -75,10 +75,14 @@ class JointRDPG(BaseEmbed):
         self,
         n_components=None,
         n_elbows=2,
-        unscaled=True,
         algorithm="randomized",
         n_iter=5,
+        unscaled=True,
     ):
+        if not isinstance(unscaled, bool):
+            msg = "unscaled must be a boolean, not {}".format(unscaled)
+            raise TypeError(msg)
+
         super().__init__(
             n_components=n_components,
             n_elbows=n_elbows,
@@ -157,10 +161,10 @@ class JointRDPG(BaseEmbed):
 
         Parameters
         ----------
-        graphs : list of graphs, or array-like
-            List of array-like, (n_vertices, n_vertices), or list of 
-            networkx.Graph. If array-like, the shape must be 
-            (n_graphs, n_vertices, n_vertices)
+        graphs : list of nx.Graph or ndarray, or ndarray
+            If list of nx.Graph, each Graph must contain same number of nodes.
+            If list of ndarray, each array must have shape (n_vertices, n_vertices).
+            If ndarray, then array must have shape (n_graphs, n_vertices, n_vertices).
         
         y : Ignored
 
@@ -168,20 +172,10 @@ class JointRDPG(BaseEmbed):
         -------
         self : returns an instance of self.
         """
-        # Convert input to np.arrays
-        graphs = [import_graph(g) for g in graphs]
-
-        # Check if the input is valid
-        _check_valid_graphs(graphs)
+        graphs = self._check_input_graphs(graphs)
 
         # Check if undirected
         undirected = any(is_almost_symmetric(g) for g in graphs)
-
-        # Save attributes
-        self.n_graphs_ = len(graphs)
-        self.n_vertices_ = graphs[0].shape[0]
-
-        graphs = np.stack(graphs)
 
         # embed
         Uhat, Vhat = self._reduce_dim(graphs)

@@ -8,7 +8,7 @@ import numpy as np
 from sklearn.utils.validation import check_is_fitted
 
 from ..utils import get_lcc, import_graph, is_fully_connected
-from .base import BaseEmbed, _check_valid_graphs
+from .base import BaseEmbedMulti
 from .svd import selectSVD
 
 
@@ -37,13 +37,15 @@ def _get_omni_matrix(graphs):
     # Super fast and efficient
     out = (A[:, :, None, :] + A.transpose(1, 0, 2)[None, :, :, :]).reshape(n * m, -1)
 
+    print(out.dtype)
     # Averaging
-    out /= 2
+    # out /= 2
+    np.true_divide(out, 2, out=out)
 
     return out
 
 
-class OmnibusEmbed(BaseEmbed):
+class OmnibusEmbed(BaseEmbedMulti):
     r"""
     Omnibus embedding of arbitrary number of input graphs with matched vertex 
     sets.
@@ -144,17 +146,7 @@ class OmnibusEmbed(BaseEmbed):
         -------
         self : returns an instance of self.
         """
-        # Convert input to np.arrays
-        graphs = [import_graph(g) for g in graphs]
-
-        # Check if the input is valid
-        _check_valid_graphs(graphs)
-
-        # Save attributes
-        self.n_graphs_ = len(graphs)
-        self.n_vertices_ = graphs[0].shape[0]
-
-        graphs = np.stack(graphs)
+        graphs = self._check_input_graphs(graphs)
 
         # Check if Abar is connected
         if self.check_lcc:
