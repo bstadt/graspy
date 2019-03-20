@@ -124,6 +124,7 @@ class JointRDPG(BaseEmbedMulti):
             Us = np.hstack([U[:, :best_dimension] for U in Us])
             Vs = np.hstack([V.T[:, :best_dimension] for V in Vs])
         else:
+            # Equivalent to ASE
             Us = np.hstack(
                 [
                     U[:, :best_dimension] @ np.diag(D[:best_dimension])
@@ -132,7 +133,7 @@ class JointRDPG(BaseEmbedMulti):
             )
             Vs = np.hstack(
                 [
-                    V[:, :best_dimension] @ np.diag(V[:best_dimension])
+                    V.T[:, :best_dimension] @ np.diag(D[:best_dimension])
                     for V, D in zip(Vs, Ds)
                 ]
             )

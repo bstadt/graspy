@@ -37,7 +37,6 @@ def _get_omni_matrix(graphs):
     # Super fast and efficient
     out = (A[:, :, None, :] + A.transpose(1, 0, 2)[None, :, :, :]).reshape(n * m, -1)
 
-    print(out.dtype)
     # Averaging
     # out /= 2
     np.true_divide(out, 2, out=out)
