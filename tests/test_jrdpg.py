@@ -10,23 +10,29 @@ from graspy.simulations.simulations import er_np, sbm
 from graspy.utils.utils import is_symmetric, symmetrize
 
 
-def make_train(n=[20, 20], m=10, directed=False):
+def make_train_undirected(n=[20, 20], m=10):
     """
     Make 4 class training dataset
     n = number of vertices
     m = number of graphs from each class
     """
-    p1 = [[0.5, 0.2], [0.2, 0.5]]
-    p2 = [[0.2, 0.5], [0.5, 0.2]]
-    p3 = [[0.2, 0.15], [0.15, 0.2]]
-    A = [sbm(n, p) for _ in range(m) for p in [p1, p2, p3]]
+    p1 = [[1, 0], [0, 1]]
+    p2 = [[0, 1], [1, 0]]
+    p3 = [[1, 0], [0, 0]]
+    p4 = [[0, 0], [0, 1]]
 
-    if directed:
-        p4 = [[0.25, 0.1], [0.5, 0.9]]  # Assymetric
-        A += [sbm(n, p4, directed=True) for _ in range(m)]
-    else:
-        p4 = [[0.05, 0.25], [0.25, 0.05]]
-        A += [sbm(n, p4) for _ in range(m)]
+    A = [sbm(n, p) for _ in range(m) for p in [p1, p2, p3, p4]]
+
+    return A
+
+
+def make_train_directed(n=[20, 20], m=10):
+    p1 = [[0, 1], [0, 0]]
+    p2 = [[0, 0], [1, 0]]
+    p3 = [[1, 1], [0, 0]]
+    p4 = [[0, 0], [1, 1]]
+
+    A = [sbm(n, p, directed=True) for _ in range(m) for p in [p1, p2, p3, p4]]
 
     return A
 
@@ -59,42 +65,74 @@ def test_graph_clustering():
     np.random.seed(2)
     n = [20, 20]
     m = 10
-    X = make_train(n, m)
+    X = make_train_undirected(n, m)
 
     res = JointRDPG(n_components=2).fit(X).scores_.reshape((m * 4, -1))
     gmm = GaussianCluster(max_components=10).fit(res)
-
     assert gmm.n_components_ == 4
 
     # directed case
-    """np.random.seed(3)
-    X = make_train(n, m, directed=True)
+    np.random.seed(3)
+    X = make_train_directed(n, m)
 
     res = JointRDPG(n_components=2).fit(X).scores_.reshape((m * 4, -1))
     gmm = GaussianCluster(max_components=10).fit(res)
+    assert gmm.n_components_ == 4
 
-    assert gmm.n_components_ == 4"""
+    # Scaled cases
+    # undirected case
+    np.random.seed(12)
+    X = make_train_undirected(n, m)
+
+    res = JointRDPG(n_components=2, unscaled=False).fit(X).scores_.reshape((m * 4, -1))
+    gmm = GaussianCluster(max_components=10).fit(res)
+    assert gmm.n_components_ == 4
+
+    # directed case
+    np.random.seed(13)
+    X = make_train_directed(n, m)
+
+    res = JointRDPG(n_components=2, unscaled=False).fit(X).scores_.reshape((m * 4, -1))
+    gmm = GaussianCluster(max_components=10).fit(res)
+    assert gmm.n_components_ == 4
 
 
 def test_vertex():
     """
-    There should be 2 clusters since all SBMs are 2-block model.
+    There should be 2 clusters for undirected and 4 for directed.
     """
     # undirected case
     np.random.seed(4)
     n = [20, 20]
     m = 10
-    X = make_train(n, m)
+    X = make_train_undirected(n, m)
 
     res = JointRDPG(n_components=2).fit(X).latent_left_
     gmm = GaussianCluster(max_components=10).fit(res)
-
     assert gmm.n_components_ == 2
 
     # directed case
-    """np.random.seed(5)
-    X = make_train(n, m, directed=True)
+    np.random.seed(5)
+    X = make_train_directed(n, m)
 
     jrdpg = JointRDPG(n_components=2).fit(X)
     res = np.hstack([jrdpg.latent_left_, jrdpg.latent_right_])
-    gmm = GaussianCluster(max_components=10).fit(res)"""
+    gmm = GaussianCluster(max_components=10).fit(res)
+    assert gmm.n_components_ == 4
+
+    # Scaled cases
+    # undirected case
+    np.random.seed(4)
+    X = make_train_undirected(n, m)
+
+    res = JointRDPG(n_components=2, unscaled=False).fit_transform(X)
+    gmm = GaussianCluster(max_components=10).fit(res)
+    assert gmm.n_components_ == 2
+
+    # directed case
+    np.random.seed(5)
+    X = make_train_directed(n, m)
+
+    left, right = JointRDPG(n_components=2, unscaled=False).fit_transform(X)
+    gmm = GaussianCluster(max_components=10).fit(np.hstack([left, right]))
+    assert gmm.n_components_ == 2  # why is this 2?
