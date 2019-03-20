@@ -115,8 +115,8 @@ class JointRDPG(BaseEmbedMulti):
                 elbows, _ = select_dimension(D, n_elbows=self.n_elbows)
                 embedding_dimensions.append(elbows[-1])
 
-            # Choose the median of all of best embedding dimension of all graphs
-            best_dimension = int(np.ceil(np.median(embedding_dimensions)))
+            # Choose the max of all of best embedding dimension of all graphs
+            best_dimension = int(np.ceil(np.max(embedding_dimensions)))
         else:
             best_dimension = self.n_components
 
