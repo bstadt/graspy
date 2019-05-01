@@ -1,16 +1,28 @@
-import warnings
+# Copyright 2019 NeuroData (http://neurodata.io)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import numpy as np
 from sklearn.utils.validation import check_is_fitted
 
-from ..utils import get_lcc, import_graph, is_fully_connected, is_almost_symmetric
+from ..utils import get_lcc, import_graph, is_almost_symmetric
 from .base import BaseEmbedMulti
 from .svd import select_dimension, selectSVD
 
 
-class JointRDPG(BaseEmbedMulti):
+class MASE(BaseEmbedMulti):
     r"""
-    Joint random dot product graphs (JRDPG) embeds arbitrary number of input 
+    Multiple Adjacency Spectral Embedding (MASE) embeds arbitrary number of input 
     graphs with matched vertex sets.
 
     For a population of undirected graphs, JRDPG assumes that the population of graphs 
