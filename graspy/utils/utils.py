@@ -39,10 +39,15 @@ def import_graph(graph):
         out = nx.to_numpy_array(graph, nodelist=sorted(graph.nodes), dtype=np.float)
     elif isinstance(graph, (np.ndarray, np.memmap)):
         shape = graph.shape
-        if len(shape) == 3:
+        if len(shape) > 3:
+            msg = "Input tensor must have at most 3 dimensions, not {}.".format(
+                len(shape)
+            )
+            raise ValueError(msg)
+        elif len(shape) == 3:
             if shape[1] != shape[2]:
                 msg = "Input tensor must have same number of vertices."
-                raise (ValueError, msg)
+                raise ValueError(msg)
             min_features = shape[1]
             min_samples = 2
         else:
