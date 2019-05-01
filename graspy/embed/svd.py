@@ -1,9 +1,16 @@
-#!/usr/bin/env python
-
-# svd.py
-# Created by Eric Bridgeford on 2018-09-07.
-# Email: ebridge2@jhu.edu
-# Copyright (c) 2018. All rights reserved.
+# Copyright 2019 NeuroData (http://neurodata.io)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import numpy as np
 import scipy
@@ -193,18 +200,18 @@ def selectSVD(X, n_components=None, n_elbows=2, algorithm="randomized", n_iter=5
         < min(X.shape). If None, then optimal dimensions will be chosen by
         ``select_dimension`` using ``n_elbows`` argument.
     n_elbows : int, optional, default: 2
-        If `n_compoents=None`, then compute the optimal embedding dimension using
+        If `n_components=None`, then compute the optimal embedding dimension using
         `select_dimension`. Otherwise, ignored.
-    algorithm : {'full', 'truncated' (default), 'randomized'}, optional
+    algorithm : {'randomized' (default), 'full', 'truncated'}, optional
         SVD solver to use:
 
+        - 'randomized'
+            Computes randomized svd using 
+            ``sklearn.utils.extmath.randomized_svd``
         - 'full'
             Computes full svd using ``scipy.linalg.svd``
         - 'truncated'
             Computes truncated svd using ``scipy.sparse.linalg.svd``
-        - 'randomized'
-            Computes randomized svd using 
-            ``sklearn.utils.extmath.randomized_svd``
     n_iter : int, optional (default = 5)
         Number of iterations for randomized SVD solver. Not used by 'full' or 
         'truncated'. The default is larger than the default in randomized_svd 

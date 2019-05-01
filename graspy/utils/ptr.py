@@ -1,3 +1,17 @@
+# Copyright 2019 NeuroData (http://neurodata.io)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
 from .utils import import_graph, is_unweighted, is_symmetric, is_loopless, symmetrize
 from scipy.stats import rankdata
@@ -15,12 +29,13 @@ def pass_to_ranks(graph, method="simple-nonzero"):
     method: {'simple-nonzero' (default), 'simple-all', 'zero-boost'} string, optional
         
         - 'simple-nonzero'
-            same as simple-all, but ranks are scaled by
-            :math:`\frac{2 rank(\text{non-zero edges})}{\text{total non-zero edges} + 1}`
+            assigns ranks to all non-zero edges, settling ties using 
+            the average. Ranks are then scaled by 
+            :math:`\frac{rank(\text{non-zero edges})}{\text{total non-zero edges} + 1}`
         - 'simple-all'
             assigns ranks to all non-zero edges, settling ties using 
             the average. Ranks are then scaled by 
-            :math:`\frac{2 rank(\text{non-zero edges})}{n^2 + 1}` 
+            :math:`\frac{rank(\text{non-zero edges})}{n^2 + 1}` 
             where n is the number of nodes
         - 'zero-boost'
             preserves the edge weight for all 0s, but ranks the other
@@ -30,7 +45,8 @@ def pass_to_ranks(graph, method="simple-nonzero"):
             edges would have received. Number of possible edges is determined 
             by the type of graph (loopless or looped, directed or undirected).
         
-
+        
+        
     See also
     --------
     scipy.stats.rankdata
