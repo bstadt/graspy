@@ -39,10 +39,10 @@ class MultipleASE(BaseEmbedMulti):
     Parameters
     ----------
     n_components : int or None, (default=None)
-        Desired dimensionality of output data. If "full", 
+        Desired dimensionality of output data. If algorithm=="full", 
         n_components must be <= min(X.shape). Otherwise, n_components must be
         < min(X.shape). If None, then optimal dimensions will be chosen by
-        -----.
+        `select_dimension`.
     n_elbows : int, optional (default=2)
         If `n_compoents=None`, then compute the optimal embedding dimension using
         `select_dimension`. Otherwise, ignored.
