@@ -20,7 +20,7 @@ Multiple graph embedding
 ------------------------
 
 .. autoclass:: OmnibusEmbed
-.. autoclass:: JointRDPG
+.. autoclass:: MultipleASE
 
 Dissimilarity graph embedding
 -----------------------------
