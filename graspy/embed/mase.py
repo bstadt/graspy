@@ -20,7 +20,7 @@ from .base import BaseEmbedMulti
 from .svd import select_dimension, selectSVD
 
 
-class MASE(BaseEmbedMulti):
+class MultipleASE(BaseEmbedMulti):
     r"""
     Multiple Adjacency Spectral Embedding (MASE) embeds arbitrary number of input 
     graphs with matched vertex sets.

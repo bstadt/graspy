@@ -5,7 +5,7 @@ from numpy.linalg import norm
 from numpy.testing import assert_allclose
 
 from graspy.cluster.gclust import GaussianCluster
-from graspy.embed.jrdpg import JointRDPG
+from graspy.embed.mase import MultipleASE
 from graspy.simulations.simulations import er_np, sbm
 from graspy.utils.utils import is_symmetric, symmetrize
 
@@ -41,19 +41,19 @@ def test_bad_inputs():
     with pytest.raises(TypeError):
         "Invalid unscaled"
         unscaled = "1"
-        jrdpg = JointRDPG(unscaled=unscaled)
+        mase = MultipleASE(unscaled=unscaled)
 
     with pytest.raises(ValueError):
         "Test single graph input"
         np.random.seed(1)
         A = er_np(100, 0.2)
-        JointRDPG().fit(A)
+        MultipleASE().fit(A)
 
     with pytest.raises(ValueError):
         "Test graphs with different sizes"
         np.random.seed(1)
         A = [er_np(100, 0.2)] + [er_np(200, 0.2)]
-        JointRDPG().fit(A)
+        MultipleASE().fit(A)
 
 
 def test_graph_clustering():
@@ -67,7 +67,7 @@ def test_graph_clustering():
     m = 10
     X = make_train_undirected(n, m)
 
-    res = JointRDPG(n_components=2).fit(X).scores_.reshape((m * 4, -1))
+    res = MultipleASE(n_components=2).fit(X).scores_.reshape((m * 4, -1))
     gmm = GaussianCluster(max_components=10).fit(res)
     assert gmm.n_components_ == 4
 
@@ -75,7 +75,7 @@ def test_graph_clustering():
     np.random.seed(3)
     X = make_train_directed(n, m)
 
-    res = JointRDPG(n_components=2).fit(X).scores_.reshape((m * 4, -1))
+    res = MultipleASE(n_components=2).fit(X).scores_.reshape((m * 4, -1))
     gmm = GaussianCluster(max_components=10).fit(res)
     assert gmm.n_components_ == 4
 
@@ -84,7 +84,9 @@ def test_graph_clustering():
     np.random.seed(12)
     X = make_train_undirected(n, m)
 
-    res = JointRDPG(n_components=2, unscaled=False).fit(X).scores_.reshape((m * 4, -1))
+    res = (
+        MultipleASE(n_components=2, unscaled=False).fit(X).scores_.reshape((m * 4, -1))
+    )
     gmm = GaussianCluster(max_components=10).fit(res)
     assert gmm.n_components_ == 4
 
@@ -92,7 +94,9 @@ def test_graph_clustering():
     np.random.seed(13)
     X = make_train_directed(n, m)
 
-    res = JointRDPG(n_components=2, unscaled=False).fit(X).scores_.reshape((m * 4, -1))
+    res = (
+        MultipleASE(n_components=2, unscaled=False).fit(X).scores_.reshape((m * 4, -1))
+    )
     gmm = GaussianCluster(max_components=10).fit(res)
     assert gmm.n_components_ == 4
 
@@ -107,7 +111,7 @@ def test_vertex():
     m = 10
     X = make_train_undirected(n, m)
 
-    res = JointRDPG(n_components=2).fit(X).latent_left_
+    res = MultipleASE(n_components=2).fit(X).latent_left_
     gmm = GaussianCluster(max_components=10).fit(res)
     assert gmm.n_components_ == 2
 
@@ -115,8 +119,8 @@ def test_vertex():
     np.random.seed(5)
     X = make_train_directed(n, m)
 
-    jrdpg = JointRDPG(n_components=2).fit(X)
-    res = np.hstack([jrdpg.latent_left_, jrdpg.latent_right_])
+    mase = MultipleASE(n_components=2).fit(X)
+    res = np.hstack([mase.latent_left_, mase.latent_right_])
     gmm = GaussianCluster(max_components=10).fit(res)
     assert gmm.n_components_ == 4
 
@@ -125,7 +129,7 @@ def test_vertex():
     np.random.seed(4)
     X = make_train_undirected(n, m)
 
-    res = JointRDPG(n_components=2, unscaled=False).fit_transform(X)
+    res = MultipleASE(n_components=2, unscaled=False).fit_transform(X)
     gmm = GaussianCluster(max_components=10).fit(res)
     assert gmm.n_components_ == 2
 
@@ -133,6 +137,6 @@ def test_vertex():
     np.random.seed(5)
     X = make_train_directed(n, m)
 
-    left, right = JointRDPG(n_components=2, unscaled=False).fit_transform(X)
+    left, right = MultipleASE(n_components=2, unscaled=False).fit_transform(X)
     gmm = GaussianCluster(max_components=10).fit(np.hstack([left, right]))
     assert gmm.n_components_ == 2  # why is this 2?
