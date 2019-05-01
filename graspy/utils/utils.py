@@ -66,7 +66,7 @@ def import_graph(graph):
             allow_nd=True,  # For omni tensor input
             ensure_min_features=min_features,
             ensure_min_samples=min_samples,
-            copy=True,
+            copy=False,
         )
     else:
         msg = "Input must be networkx.Graph or np.array, not {}.".format(type(graph))

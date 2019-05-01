@@ -216,7 +216,7 @@ class BaseEmbedMulti(BaseEmbed):
         # This check is needed because np.stack will always duplicate array in memory.
         if isinstance(graphs, (list, tuple)):
             out = [import_graph(g) for g in graphs]
-            out = np.stack(out)
+            # out = np.stack(out)
         elif isinstance(graphs, np.ndarray):
             out = import_graph(graphs)
         else:
